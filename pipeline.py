@@ -161,3 +161,112 @@ def clean_orders(df: pd.DataFrame) -> pd.DataFrame:
     clean_df['city'] = clean_df['city'].fillna('Unknown')
    
     return clean_df
+
+# 8. Дупликати. Написати функцију remove_duplicate_orders(df: pd.DataFrame) -> tuple
+# која враћа (unique, duplicates) по order_id, задржава први
+# Output: 1840 јединствених, 12 дупликата
+
+def remove_duplicate_orders(df: pd.DataFrame) -> tuple:
+    is_dup = df.duplicated('order_id', keep='first')
+    return df[~is_dup], df[is_dup]
+
+# 9. Написати функцију validate_order(row: dict, product_ids: set) -> str која враћа
+# 'OK' за исправан ред, у супротном разлог
+# Провере радити редом и вратити први пронађени проблем
+# order_id не почиње са NSS- -> 'invalid_order'
+# quantity недостаје -> 'missing_quantity'
+# quantity није цео број већи од нуле -> 'invalid_quantity'
+# unit_price није број већи од нуле -> 'invalid_price'
+# product_id не постоји међу производима -> 'unknown_product'
+# Помоћ:
+# pd.to_numeric(value, errors='coerce') претвара '2' у 2, а 'abc' у NaN
+# pd.isna(value) препознаје и None и NaN
+  
+def validate_order(row: dict, product_ids: set) -> str:
+    if row['order_id'].split('-')[0]!='NSS':
+        return 'invalid_order'
+    elif row['quantity'].isna():
+        return 'missing_quantity'
+    elif not int(pd.to_numeric(['quantity'], errors='coerce'))>0:
+        return 'invalid_quantity'
+    elif not (pd.to_numeric(['quantity'], errors='coerce'))>0:
+        return 'invalid_price'
+    elif row['product_id'] not in product_ids:
+        return 'unknown_product'
+    else: 
+        return 'OK'
+
+# 10. Написати функцију transform_orders(df: pd.DataFrame, products: pd.DataFrame) ->
+# pd.DataFrame
+# Типови:
+# quantity -> int
+# unit_price -> float
+# order_date -> датум (pd.to_datetime)
+# Нова колона total (quantity * unit_price)
+# Из очишћених производа (products) додати product_name, team_code и category
+# (merge по product_id)
+# Output: 1800 редова и 12 колона (8 из поруџбина, total, и 3 из производа)
+
+def transform_orders(df: pd.DataFrame, products: pd.DataFrame) -> pd.DataFrame:
+    df['quantity']=df['quantity'].astype(int)
+    df['unit_price']=df['unit_price'].astype(float)
+    df['order_date']=pd.to_datetime(df['order_date'])
+    df['total']=df['quantity']*df['unit_price']
+    merged = df.merge(products,
+         on = 'product_id',
+         how = 'inner')
+    
+    result = pd.merge(df, products, on='product_id').drop(columns=['product_id','sku','price','active'])
+
+
+
+# 17. Load. Написати функцију load(outputs: dict, processed_dir: str) -> dict која сваки
+# DataFrame из речника {име_фајла: DataFrame} уписује у processed_dir и враћа
+# {име_фајла: број_редова}
+
+def load(outputs: dict, processed_dir: str) -> dict:
+    written = {}
+    for name, df in outputs.items():
+        path = os.path.join(processed_dir, name)
+    if name.endswith('.parquet'):
+        df.to_parquet(path, index=False)
+    else:
+        df.to_csv(path, index=False)
+        written[name] = len(df)
+    return written
+
+
+# 18. Написати функцију run_pipeline(raw_dir: str, processed_dir: str) -> dict која
+# покреће цео pipeline
+
+def run_pipeline(raw_dir: str, processed_dir: str) -> None:
+    data = extract(raw_dir)
+    products = clean_products(data['products'])
+    valid, rejected = split_orders(data['orders'], products)
+    results = team_results(data['matches'], data['teams'])
+    windows = match_windows(results)
+    outputs = {
+        'clean_orders.parquet': valid,
+        'rejected_orders.csv': rejected,
+        'products.csv': products,
+        'league_table.csv': league_table(results),
+        'revenue_by_team.csv': revenue_by(valid.dropna(subset=
+        ['team_code']), 'team_code'),
+        'revenue_by_category.csv': revenue_by(valid, 'category'),
+        'sales_after_results.csv': sales_after_results(valid, windows),
+    }
+    written = load(outputs, processed_dir)
+    summary = {
+        'total_rows': len(data['orders']),
+        'duplicates': int((rejected['reason'] == 'duplicate').sum()),
+        'valid_rows': len(valid),
+        'rejected_rows': len(rejected),
+        'total_revenue': round(float(valid['total'].sum()), 2),
+        'files_written': len(written) + 1,
+    }
+    pd.DataFrame(list(summary.items()), columns=['metric',
+    'value']).to_csv(
+    os.path.join(processed_dir, 'summary.csv'), index=False)
+    return summary
+
+run_pipeline(RAW_DIR, PROCESSED_DIR)
