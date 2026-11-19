@@ -109,3 +109,55 @@ def extract(raw_dir: str) -> dict:
         'matches': matches
     }
     return dict
+
+
+#pomocna funkcija
+def remove_duplicate_products(df: pd.DataFrame) -> pd.DataFrame:
+    is_dup = df.duplicated('product_id', keep='first')
+    return df[~is_dup]
+
+
+# 6. Производи. Написати функцију clean_products(df: pd.DataFrame) -> pd.DataFrame
+# која чисти каталог производа
+# Ако се понавља исти производ, садржати први ред за сваки product_id
+# team_code треба да буде без размака, има велика слова (npm -> NPM), празан ред
+# остаје празан (то су производи лиге, без тима)
+# category треба да буде без размака, има мала слова
+# price је текст у три облика '1490.00', '1490 RSD', '1490,00' а треба да постане
+# само float (у сваком случају)
+# Помоћ: .str.replace(' RSD', '', regex=False), pd.to_numeric(...)
+# active трансформишемо у True/False ('yes', 'Yes', 'YES' постају True), све остало
+# постаје False
+# Output: 105 редова, price је типа float64, active је True за 101 производ
+# Ред 1003 изгледа овако: {'team_code': 'NPM', 'category': 'scarves',
+# 'price': 1490.0, 'active': True, ...}
+
+def clean_products(df: pd.DataFrame) -> pd.DataFrame:
+    df=df.copy()
+    data=remove_duplicates_products(df)
+    if not data['team_code'].isna():
+        data['team_code']=data['team_code'].str.strip().str.upper()
+    data['category']=data['category'].str.strip().str.lower()
+    data['price'] = pd.to_numeric(
+        data['price'].str.replace(' RSD', '', regex=False),
+         # Optional: turns unparseable values into NaN instead of crashing
+        )
+    data['active']=data['active'].str.strip().str.lower()=='yes'
+    return data
+     
+
+# 7. Поруџбине. Написати функцију clean_orders(df: pd.DataFrame) -> pd.DataFrame
+# order_id, customer, city, payment без размака;
+# order_id велика слова
+# customer и city -> title()
+# Град који недостаје (isna) -> 'Unknown'
+
+def clean_orders(df: pd.DataFrame) -> pd.DataFrame:
+    clean_df=df.copy()
+    clean_df['order_id']=clean_df['order_id'].str.strip()
+    clean_df['customer']=clean_df['customer'].str.strip().str.title()
+    clean_df['city']=clean_df['city'].str.strip().str.title()
+    clean_df['payment']=clean_df['payment'].str.strip()
+    clean_df['city'] = clean_df['city'].fillna('Unknown')
+   
+    return clean_df
