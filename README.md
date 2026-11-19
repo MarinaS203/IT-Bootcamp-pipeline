@@ -1,2 +1,1 @@
-# nss-pipeline
-#probni projekat
+Informacije o pipeline-u ce biti dopunjene naknadno.
