@@ -23,8 +23,6 @@ def get_json(url: str) -> dict:
     response=requests.get(url)
     response.raise_for_status()
     return response.json()
-# get_json(BASE_URL + 'status.json')['service']
-# get_json(BASE_URL + 'orders/page-99.json')
 
 
 # 2. Странице. Написати функцију fetch_all(first_url: str) -> list која прати next
@@ -46,8 +44,6 @@ def fetch_all(first_url: str) -> list:
 
     return list_of_orders
 
-# fetch_all(BASE_URL + 'orders/page-1.json')
-
 
 # 3. Чување сирових података. Написати функцију save_json(records: list, path: str) ->
 # None која листу речника уписује у JSON фајл без икаквих измена.
@@ -58,9 +54,6 @@ def fetch_all(first_url: str) -> list:
 def save_json(records: list, path: str) -> None:
     with open(path, mode="w", encoding="utf-8") as f:
         json.dump(records, f, ensure_ascii=False, indent=2)
-
-# orders=fetch_all(BASE_URL + 'orders/page-1.json')
-# save_json(orders, os.path.join(RAW_DIR, 'orders.json'))
 
 
 # 4. Преузимање фајла. Функција је дата: копирати је без измена у своју ћелију и користити у
@@ -73,9 +66,6 @@ def download_file(url: str, path: str) -> int:
     with open(path, 'wb') as f: # 'wb' = write bytes, needed for Parquet
         f.write(response.content) # .content = the file's bytes, unchanged
     return len(response.content)
-
-#download_file(FILES_URL + 'teams.csv', os.path.join(RAW_DIR,'teams.csv'))
-
 
 # 5. Написати функцију extract(raw_dir: str) -> dict која преузима сва четири извора у
 # raw_dir и враћа речник са четири DataFrame-а: 'orders', 'products', 'teams','matches'
@@ -159,7 +149,6 @@ def clean_orders(df: pd.DataFrame) -> pd.DataFrame:
     clean_df['city']=clean_df['city'].str.strip().str.title()
     clean_df['payment']=clean_df['payment'].str.strip()
     clean_df['city'] = clean_df['city'].fillna('Unknown')
-   
     return clean_df
 
 # 8. Дупликати. Написати функцију remove_duplicate_orders(df: pd.DataFrame) -> tuple
@@ -212,12 +201,8 @@ def transform_orders(df: pd.DataFrame, products: pd.DataFrame) -> pd.DataFrame:
     df['unit_price']=df['unit_price'].astype(float)
     df['order_date']=pd.to_datetime(df['order_date'])
     df['total']=df['quantity']*df['unit_price']
-    merged = df.merge(products,
-         on = 'product_id',
-         how = 'inner')
-    
     result = pd.merge(df, products, on='product_id').drop(columns=['product_id','sku','price','active'])
-
+    return result
 
 
 # 17. Load. Написати функцију load(outputs: dict, processed_dir: str) -> dict која сваки
