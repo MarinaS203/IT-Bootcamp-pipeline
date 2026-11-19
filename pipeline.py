@@ -73,3 +73,39 @@ def download_file(url: str, path: str) -> int:
     with open(path, 'wb') as f: # 'wb' = write bytes, needed for Parquet
         f.write(response.content) # .content = the file's bytes, unchanged
     return len(response.content)
+
+#download_file(FILES_URL + 'teams.csv', os.path.join(RAW_DIR,'teams.csv'))
+
+
+# 5. Написати функцију extract(raw_dir: str) -> dict која преузима сва четири извора у
+# raw_dir и враћа речник са четири DataFrame-а: 'orders', 'products', 'teams','matches'
+# 1. Поруџбине читамо помоћу API-ја (fetch_all) (orders.json)
+# 2. Фајлови products.csv, teams.csv, matches.parquet се добијају помоћу функције
+# download_file
+# 3. Поруџбине у DataFrame: pd.json_normalize(orders, sep='_')
+# Након тога преименовати колоне
+# customer_name у customer
+# customer_city у city
+# 4. Остало читамо из raw_dir (где смо у кораку 2 скинули податке)
+# По потреби, pd.read_csv(...) или pd.read_parquet(...)
+# 5. Провера: orders (1852, 8), products (108, 7), teams (20, 5), matches (120, 9)
+
+def extract(raw_dir: str) -> dict:
+    fetch_all(BASE_URL + 'orders/page-1.json') #vraca listu recnika
+    download_file(FILES_URL + 'products.csv', os.path.join(RAW_DIR,'products.csv')) 
+    download_file(FILES_URL + 'teams.csv', os.path.join(RAW_DIR,'teams.csv'))
+    download_file(FILES_URL + 'matches.parquet', os.path.join(RAW_DIR,'matches.parquet'))
+    with open(os.path.join(raw_dir, 'orders.json'), 'r', encoding='utf-8') as f:
+        orders = json.load(f)
+        orders=pd.json_normalize(orders, sep='_')
+        orders=orders.rename(columns={'customer_name': 'customer', 'customer_city': 'city'})
+    products=pd.read_csv(os.path.join(raw_dir,'products.csv'))
+    teams=pd.read_csv(os.path.join(raw_dir, 'teams.csv'))
+    matches=pd.read_parquet(os.path.join(raw_dir, 'matches.parquet'))
+    dict = {
+        'orders': orders,
+        'products': products,
+        'teams': teams,
+        'matches': matches
+    }
+    return dict
