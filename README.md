@@ -1,2 +1,2 @@
-# nss-pipeline
-#probni projekat
+Analiza prodajte proizvoda tima, nakon odigranih utakmica.
+
